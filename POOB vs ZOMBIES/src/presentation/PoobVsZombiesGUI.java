@@ -3,42 +3,32 @@ package presentation;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.datatransfer.DataFlavor;
-import java.awt.datatransfer.Transferable;
-import java.awt.dnd.DnDConstants;
-import java.awt.dnd.DropTarget;
-import java.awt.dnd.DropTargetAdapter;
-import java.awt.dnd.DropTargetDropEvent;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.util.ArrayList;
 import java.util.TimerTask;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.Timer;
 
+import domain.Planta;
 import domain.PoobVsZombies;
-
+import domain.Zombie;
 
 
 public class PoobVsZombiesGUI {
     private JFrame frame;
-    private GameBoard gameBoard;
-    private java.util.List<String> selectedPlants = new java.util.ArrayList<>();
-    private java.util.List<String> selectedZombies = new java.util.ArrayList<>();
+    private GameBoard gameboard;
+    private java.util.List<Planta> selectedPlants = new java.util.ArrayList<>();
+    private java.util.List<Zombie> selectedZombies = new java.util.ArrayList<>();
     private PoobVsZombies juego;
     private JLabel sunLabel;
     private JLabel brainLabel;
 
 
-    public PoobVsZombiesGUI(GameBoard gameBoard) {
-        this.gameBoard = gameBoard;
+    public PoobVsZombiesGUI() {
         frame = new JFrame("Plants vs Zombies");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(800, 600);
         frame.setLocationRelativeTo(null);
         createMenuBar();
         juego = new PoobVsZombies();
-        juego.iniciarGeneracionSoles(5000);
     }
 
     /**
@@ -103,7 +93,7 @@ public class PoobVsZombiesGUI {
         };
 
         // Lista para almacenar las plantas seleccionadas
-        java.util.List<String> selectedPlants = new java.util.ArrayList<>();
+        java.util.List<Planta> selectedPlants = new java.util.ArrayList<>();
 
         // Botón "Listo", declarado como final para ser usado dentro del ActionListener
         JButton readyButton = new JButton("Listo");
@@ -113,15 +103,20 @@ public class PoobVsZombiesGUI {
         readyButton.setFocusPainted(false);
         readyButton.setBorder(BorderFactory.createRaisedBevelBorder());
         readyButton.addActionListener(e -> {
-            this.selectedPlants = new java.util.ArrayList<>(selectedPlants); // Guardar la selección
-            if (mode.equals("Player vs Player")) {
-                createSelectZombiesScreen(); // Mostrar selección de zombies
+            if (selectedPlants.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Selecciona al menos una planta antes de continuar.");
             } else {
-                showGameBoard(); // Mostrar el tablero directamente
+                this.selectedPlants = new java.util.ArrayList<Planta>(selectedPlants); // Guardar la selección
+                if (mode.equals("Player vs Player")) {
+                    createSelectZombiesScreen(); // Mostrar selección de zombies
+                } else if (!mode.equals("Player vs Player")) {
+                    GameBoard gameboard = new GameBoard(frame);
+                    gameboard.showGameBoard(
+                            (ArrayList<Planta>) selectedPlants
+                    );
+                }
             }
         });
-
-
 
         // Crear botones con imágenes y nombres de plantas
         for (String[] plant : plants) {
@@ -149,7 +144,7 @@ public class PoobVsZombiesGUI {
                     selectedPlants.remove(plant[0]);
                     plantButton.setBackground(new Color(200, 255, 200)); // Desmarcar
                 } else {
-                    selectedPlants.add(plant[0]);
+                    selectedPlants.add(Planta.getPlanta(plant[0]));
                     plantButton.setBackground(new Color(100, 200, 100)); // Marcar
                 }
                 readyButton.setEnabled(!selectedPlants.isEmpty()); // Habilitar "Listo" si hay plantas seleccionadas
@@ -180,10 +175,6 @@ public class PoobVsZombiesGUI {
         frame.repaint();
     }
 
-    /**
-     * Crea la pantalla para seleccionar zombies con imágenes y botones interactivos.
-     */
-
     private void createSelectZombiesScreen() {
         JPanel panel = new JPanel();
         panel.setLayout(new BorderLayout());
@@ -203,8 +194,11 @@ public class PoobVsZombiesGUI {
                 {"basicZombie", "/resources/basicZombie.png"},
                 {"coneheadZombie", "/resources/coneheadZombie.png"},
                 {"bucketheadZombie", "/resources/bucketheadZombie.png"},
-                {"eciZombie", "/resources/eciZombie.png"}
+                {"brainstain", "/resources/brainstain.png"}
         };
+
+        // Lista para almacenar los zombies seleccionados
+        java.util.List<Zombie> selectedZombies = new java.util.ArrayList<>();
 
         // Botón "Listo", declarado como final para ser usado dentro del ActionListener
         JButton readyButton = new JButton("Listo");
@@ -213,8 +207,17 @@ public class PoobVsZombiesGUI {
         readyButton.setForeground(Color.WHITE);
         readyButton.setFocusPainted(false);
         readyButton.setBorder(BorderFactory.createRaisedBevelBorder());
+        this.gameboard = new GameBoard(frame);
         readyButton.addActionListener(e -> {
-            showGameBoard(); // Mostrar el tablero
+            if (selectedZombies.isEmpty()) {
+                JOptionPane.showMessageDialog(frame, "Selecciona al menos un zombie antes de continuar.");
+            } else {
+                this.selectedZombies = new java.util.ArrayList<Zombie>(selectedZombies); // Guardar la selección
+                this.gameboard.showGameBoard(
+                        (ArrayList<Planta>) selectedPlants,
+                        (ArrayList<Zombie>) selectedZombies
+                );
+            }
         });
 
         // Crear botones con imágenes y nombres de zombies
@@ -243,7 +246,7 @@ public class PoobVsZombiesGUI {
                     selectedZombies.remove(zombie[0]);
                     zombieButton.setBackground(new Color(255, 200, 200)); // Desmarcar
                 } else {
-                    selectedZombies.add(zombie[0]);
+                    selectedZombies.add(Zombie.getZombie(zombie[0]));
                     zombieButton.setBackground(new Color(200, 100, 100)); // Marcar
                 }
                 readyButton.setEnabled(!selectedZombies.isEmpty()); // Habilitar "Listo" si hay zombies seleccionados
@@ -272,6 +275,29 @@ public class PoobVsZombiesGUI {
         frame.setContentPane(panel);
         frame.revalidate();
         frame.repaint();
+    }
+
+
+    private JButton createPlantOrZombieButton(String name, String imagePath) {
+        JButton button = new JButton();
+        button.setPreferredSize(new Dimension(60, 60));
+        button.setToolTipText(name);
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getResource(imagePath));
+            Image scaledImage = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
+            button.setIcon(new ImageIcon(scaledImage));
+        } catch (Exception e) {
+            button.setText(name);
+            button.setForeground(Color.WHITE);
+        }
+        button.setBackground(new Color(200, 200, 200));
+        button.setFocusPainted(false);
+        button.setBorder(BorderFactory.createRaisedBevelBorder());
+
+
+        button.addActionListener(e -> System.out.println("Seleccionaste: " + name));
+
+        return button;
     }
 
 
@@ -441,6 +467,13 @@ public class PoobVsZombiesGUI {
         frame.repaint();
     }
 
+
+    /**
+     * Muestra el tablero de juego una vez que se han seleccionado las plantas y zombies.
+     */
+
+
+
     /**
      * Crea la pantalla para seleccionar zombies con imágenes y botones interactivos.
      */
@@ -455,208 +488,18 @@ public class PoobVsZombiesGUI {
         return button;
     }
 
-    /**
-     * Muestra el tablero de juego una vez que se han seleccionado las plantas y zombies.
-     */
 
-    private JButton createPlantOrZombieButton(String name, String imagePath) {
-        JButton button = new JButton();
-        button.setPreferredSize(new Dimension(60, 60));
-        button.setToolTipText(name);
-        try {
-            ImageIcon icon = new ImageIcon(getClass().getResource(imagePath));
-            Image scaledImage = icon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
-            button.setIcon(new ImageIcon(scaledImage));
-        } catch (Exception e) {
-            button.setText(name);
-            button.setForeground(Color.WHITE);
-        }
-        button.setBackground(new Color(200, 200, 200));
-        button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createRaisedBevelBorder());
-
-
-        button.addActionListener(e -> System.out.println("Seleccionaste: " + name));
-
-        return button;
+    public JFrame getMainFrame() {
+        return frame;
     }
 
-    private String selectedPlant = null;
-    private String selectedZombie = null;
 
     /**
      * Muestra la pantalla de selección de modos de juego.
      */
-
-    void showGameBoard() {
-        JLayeredPane layeredPane = new JLayeredPane();
-        layeredPane.setPreferredSize(new Dimension(800, 600));
-
-        // Panel superior para selección de plantas
-        JPanel topPanel = new JPanel();
-        topPanel.setBackground(new Color(139, 69, 19));
-        topPanel.setBounds(0, 0, 800, 80); // Reducido en altura
-        topPanel.setLayout(new FlowLayout(FlowLayout.LEFT, 10, 10));
-
-        for (String plant : selectedPlants) {
-            JButton plantButton = new JButton();
-            try {
-                ImageIcon plantIcon = new ImageIcon(getClass().getResource("/resources/" + plant + ".png"));
-                Image scaledImage = plantIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
-                plantButton.setIcon(new ImageIcon(scaledImage));
-                plantButton.setActionCommand(plant);
-            } catch (Exception e) {
-                plantButton.setText(plant);
-            }
-            plantButton.setBackground(new Color(139, 69, 19));
-            plantButton.setFocusPainted(false);
-
-            plantButton.addActionListener(e -> selectedPlant = e.getActionCommand());
-
-            topPanel.add(plantButton);
-        }
-
-        // Indicador de soles
-
-        layeredPane.add(topPanel, Integer.valueOf(2));
-
-        // Panel inferior para selección de zombies
-        JPanel bottomPanel = new JPanel();
-        bottomPanel.setBackground(new Color(139, 69, 19));
-        bottomPanel.setBounds(0, 500, 800, 80); // Ubicación en la parte inferior
-        bottomPanel.setLayout(new FlowLayout(FlowLayout.RIGHT, 10, 10)); // Layout horizontal alineado a la derecha
-
-        sunLabel = new JLabel("Soles: " + (juego != null ? juego.getSoles() : 0));
-        sunLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        sunLabel.setForeground(Color.YELLOW);
-
-
-        brainLabel = new JLabel("Cerebros: " + (juego != null ? juego.getCerebros() : 0));
-        brainLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        brainLabel.setForeground(Color.PINK);
-
-        // Agregar etiquetas a los paneles correspondientes
-        topPanel.add(sunLabel);
-        bottomPanel.add(brainLabel);
-
-        // Actualizar dinámicamente las etiquetas
-        this.juego = juego;
-        Timer uiUpdater = new Timer();
-        uiUpdater.scheduleAtFixedRate(new TimerTask() {
-            @Override
-            public void run() {
-                // Actualizar dinámicamente las etiquetas
-                SwingUtilities.invokeLater(() -> {
-                    sunLabel.setText("Soles: " + juego.getSoles());
-                    brainLabel.setText("Cerebros: " + juego.getCerebros());
-                });
-            }
-        }, 0, 10000);
-        // Indicador de cerebros
-
-        brainLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        brainLabel.setForeground(Color.PINK);
-
-        bottomPanel.add(brainLabel); // Agregar el contador al panel inferior
-
-        for (String zombie : selectedZombies) {
-            JButton zombieButton = new JButton();
-            try {
-                ImageIcon zombieIcon = new ImageIcon(getClass().getResource("/resources/" + zombie + ".png"));
-                Image scaledImage = zombieIcon.getImage().getScaledInstance(50, 50, Image.SCALE_SMOOTH);
-                zombieButton.setIcon(new ImageIcon(scaledImage));
-                zombieButton.setActionCommand(zombie);
-            } catch (Exception e) {
-                zombieButton.setText(zombie);
-            }
-            zombieButton.setBackground(new Color(139, 69, 19));
-            zombieButton.setFocusPainted(false);
-
-            zombieButton.addActionListener(e -> selectedZombie = e.getActionCommand());
-
-            bottomPanel.add(zombieButton);
-        }
-
-        layeredPane.add(bottomPanel, Integer.valueOf(2));
-
-        // Imagen de fondo del tablero
-        JLabel overlayImage = new JLabel(new ImageIcon(getClass().getResource("/resources/tableroPVZ.png")));
-        overlayImage.setBounds(0, 80, 800, 420); // Ajustada a la nueva altura del panel superior
-        layeredPane.add(overlayImage, Integer.valueOf(4));
-
-        // Grilla del tablero
-        JPanel buttonGrid = new JPanel(new GridLayout(5, 9));
-        buttonGrid.setBounds(200, 120, 550, 350);
-        buttonGrid.setOpaque(false);
-
-        for (int i = 0; i < 5; i++) {
-            for (int j = 0; j < 9; j++) {
-                JButton button = new JButton();
-                button.setContentAreaFilled(false);
-                button.setBorder(BorderFactory.createLineBorder(new Color(0, 0, 0, 60)));
-
-                button.addActionListener(e -> {
-                    if (selectedPlant != null || selectedZombie != null) {
-                        String selectedItem = selectedPlant != null ? selectedPlant : selectedZombie; // Identificar si es planta o zombie
-                        try {
-                            // Intentar colocar el ícono PNG primero
-                            ImageIcon itemIcon = new ImageIcon(getClass().getResource("/resources/" + selectedItem + ".png"));
-                            Image scaledImage = itemIcon.getImage().getScaledInstance(60, 60, Image.SCALE_SMOOTH);
-                            button.setIcon(new ImageIcon(scaledImage));
-
-                            // Intentar colocar el GIF encima del botón
-                            String gifPath = "/resources/" + selectedItem + ".gif";
-                            try {
-                                ImageIcon gifIcon = new ImageIcon(getClass().getResource(gifPath));
-                                JLabel gifLabel = new JLabel(gifIcon);
-
-                                gifLabel.setSize(40, 40); // Tamaño del GIF
-                                gifLabel.setHorizontalAlignment(SwingConstants.CENTER);
-                                gifLabel.setVerticalAlignment(SwingConstants.CENTER);
-
-                                button.setLayout(new BorderLayout());
-                                button.removeAll();
-                                button.add(gifLabel, BorderLayout.CENTER); // Agregar GIF al botón
-                                button.setIcon(null); // Quitar el ícono PNG
-                            } catch (Exception gifException) {
-                                // Si no se encuentra el GIF, mantener el PNG
-                                button.setIcon(new ImageIcon(scaledImage));
-                            }
-
-                            // Actualizar contadores según el tipo de ítem colocado
-                            if (selectedZombie != null) {
-                                int currentBrains = Integer.parseInt(brainLabel.getText().replace("Cerebros: ", ""));
-                                if (currentBrains > 0) {
-                                    brainLabel.setText("Cerebros: " + (currentBrains - 1));
-                                }
-                                selectedZombie = null; // Deseleccionar el zombie
-                            } else {
-                                selectedPlant = null; // Deseleccionar la planta
-                            }
-                        } catch (Exception ex) {
-                            ex.printStackTrace();
-                        }
-                    }
-                });
-
-
-                buttonGrid.add(button);
-            }
-        }
-
-        layeredPane.add(buttonGrid, Integer.valueOf(5));
-
-        frame.setContentPane(layeredPane);
-        frame.revalidate();
-        frame.repaint();
-    }
-
-
-
-
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            PoobVsZombiesGUI gui = new PoobVsZombiesGUI(new GameBoard());
+            PoobVsZombiesGUI gui = new PoobVsZombiesGUI();
             gui.showLoadingScreen();
             gui.frame.setVisible(true); // Hacer visible el frame
         });
